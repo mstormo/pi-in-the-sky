@@ -413,28 +413,6 @@
                 letter-spacing: 2px;
             }
 
-            .chunk-input {
-                font-family: var(--font-mono);
-                font-size: clamp(1.4rem, 4vw, 1.8rem);
-                letter-spacing: 6px;
-                text-align: center;
-                width: 100%;
-                padding: 14px;
-                background: rgba(0, 0, 0, 0.4);
-                border: 2px solid var(--border);
-                border-radius: var(--radius-sm);
-                color: var(--text-bright);
-                outline: none;
-                transition: border-color 0.2s;
-                margin-bottom: 16px;
-                -webkit-appearance: none;
-            }
-
-            .chunk-input:focus {
-                border-color: var(--cyan);
-                box-shadow: 0 0 15px rgba(6, 214, 160, 0.15);
-            }
-
             .chunk-progress {
                 display: flex;
                 gap: 3px;
@@ -1071,20 +1049,10 @@
                     </div>
                 </div>
                 <div class="chunk-progress" id="chunkProgress"></div>
-                <div class="chunk-display" id="chunkDisplay">
+                <div class="chunk-display" id="chunkDisplay" tabindex="0">
                     Press Start to begin
                 </div>
-                <input
-                    class="chunk-input"
-                    id="chunkInput"
-                    type="text"
-                    autocomplete="off"
-                    autocorrect="off"
-                    autocapitalize="off"
-                    inputmode="numeric"
-                    placeholder="Type the chunk..."
-                    style="display: none"
-                />
+                <input class="hidden-input" id="chunkInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="numeric">
                 <div class="btn-group">
                     <button class="btn btn-primary" id="chunkStart">
                         Start Learning
@@ -1902,6 +1870,24 @@
                     state.chunksLearned;
             }
 
+            var chunkTyped = "";
+
+            function chunkRenderRecall() {
+                const display = document.getElementById("chunkDisplay");
+                const chunk = getChunk(chunkIdx);
+                clearChildren(display);
+                for (var i = 0; i < chunk.length; i++) {
+                    if (i < chunkTyped.length) {
+                        display.appendChild(span("d-ok", chunkTyped[i]));
+                    } else if (i === chunkTyped.length) {
+                        display.appendChild(span("d-cur", "_"));
+                    } else {
+                        display.appendChild(span("d-dim", "\u00B7"));
+                    }
+                }
+                display.classList.remove("hidden-chunk");
+            }
+
             function chunkStartMemorize() {
                 chunkPhase = "memorize";
                 const chunk = getChunk(chunkIdx);
@@ -1913,20 +1899,58 @@
                 const display = document.getElementById("chunkDisplay");
                 display.textContent = chunk;
                 display.classList.remove("hidden-chunk");
-                document.getElementById("chunkInput").style.display = "none";
                 chunkRenderProgress();
 
                 if (chunkTimeout) clearTimeout(chunkTimeout);
                 chunkTimeout = setTimeout(function () {
                     if (chunkPhase !== "memorize") return;
                     chunkPhase = "recall";
-                    display.textContent = "Type it!";
-                    display.classList.add("hidden-chunk");
-                    const inp = document.getElementById("chunkInput");
-                    inp.style.display = "";
-                    inp.value = "";
-                    inp.focus();
+                    chunkTyped = "";
+                    chunkRenderRecall();
+                    document.getElementById("chunkInput").value = "";
+                    document.getElementById("chunkInput").focus();
                 }, 3000);
+            }
+
+            function chunkCheckAnswer() {
+                const chunk = getChunk(chunkIdx);
+                const display = document.getElementById("chunkDisplay");
+                if (chunkTyped === chunk) {
+                    chunkReps++;
+                    state.totalPracticed += 5;
+                    addXP(15);
+                    if (chunkReps >= 3) {
+                        chunkIdx++;
+                        chunkReps = 0;
+                        state.chunksLearned++;
+                        saveState();
+                        addXP(50);
+                        submitScore("chunks", state.chunksLearned);
+                        showToast("Chunk " + chunkIdx + " mastered!");
+                    }
+                    chunkRenderProgress();
+                    chunkTyped = "";
+                    if (chunkIdx < totalChunks()) {
+                        chunkStartMemorize();
+                    } else {
+                        chunkPhase = "idle";
+                        display.textContent = "All chunks mastered!";
+                        display.classList.add("hidden-chunk");
+                    }
+                } else {
+                    display.classList.add("shake");
+                    setTimeout(function () { display.classList.remove("shake"); }, 300);
+                    // Show the correct chunk briefly, then retry
+                    display.textContent = chunk;
+                    display.classList.remove("hidden-chunk");
+                    chunkTyped = "";
+                    if (chunkTimeout) clearTimeout(chunkTimeout);
+                    chunkTimeout = setTimeout(function () {
+                        if (chunkPhase !== "recall") return;
+                        chunkRenderRecall();
+                        document.getElementById("chunkInput").focus();
+                    }, 1500);
+                }
             }
 
             document
@@ -1946,64 +1970,34 @@
                     chunkIdx = 0;
                     chunkReps = 0;
                     chunkPhase = "idle";
+                    chunkTyped = "";
                     document.getElementById("chunkDisplay").textContent =
                         "Press Start to begin";
                     document
                         .getElementById("chunkDisplay")
                         .classList.remove("hidden-chunk");
-                    document.getElementById("chunkInput").style.display =
-                        "none";
                     chunkRenderProgress();
                 });
 
             document
                 .getElementById("chunkInput")
-                .addEventListener("keydown", function (e) {
-                    if (e.key === "Enter" && chunkPhase === "recall") {
-                        const chunk = getChunk(chunkIdx);
-                        const display = document.getElementById("chunkDisplay");
-                        if (this.value === chunk) {
-                            chunkReps++;
-                            state.totalPracticed += 5;
-                            addXP(15);
-                            if (chunkReps >= 3) {
-                                chunkIdx++;
-                                chunkReps = 0;
-                                state.chunksLearned++;
-                                saveState();
-                                addXP(50);
-                                submitScore("chunks", state.chunksLearned);
-                                showToast("Chunk " + chunkIdx + " mastered!");
-                            }
-                            chunkRenderProgress();
-                            this.value = "";
-                            if (chunkIdx < totalChunks()) {
-                                chunkStartMemorize();
-                            } else {
-                                chunkPhase = "idle";
-                                display.textContent = "All chunks mastered!";
-                                display.classList.add("hidden-chunk");
-                                this.style.display = "none";
-                            }
-                        } else {
-                            this.classList.add("shake");
-                            setTimeout(
-                                () => this.classList.remove("shake"),
-                                300,
-                            );
-                            display.textContent = chunk;
-                            display.classList.remove("hidden-chunk");
-                            this.value = "";
-                            if (chunkTimeout) clearTimeout(chunkTimeout);
-                            chunkTimeout = setTimeout(() => {
-                                if (chunkPhase !== "recall") return;
-                                display.textContent = "Try again!";
-                                display.classList.add("hidden-chunk");
-                                this.focus();
-                            }, 1500);
-                        }
+                .addEventListener("input", function () {
+                    if (chunkPhase !== "recall") return;
+                    var val = this.value;
+                    if (!val) return;
+                    var digit = val[val.length - 1];
+                    this.value = "";
+                    var chunk = getChunk(chunkIdx);
+                    chunkTyped += digit;
+                    chunkRenderRecall();
+                    if (chunkTyped.length >= chunk.length) {
+                        chunkCheckAnswer();
                     }
                 });
+
+            document.getElementById("chunkDisplay").addEventListener("click", function () {
+                document.getElementById("chunkInput").focus();
+            });
 
             // ═══════════════════════════════════════════
             // FILL BLANKS MODE
