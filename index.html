@@ -375,34 +375,14 @@
                 flex-wrap: wrap;
             }
 
-            /* ─── Game Input (visible, mobile-friendly) ─── */
-            .game-input {
-                font-family: var(--font-mono);
-                font-size: 1.4rem;
-                letter-spacing: 4px;
-                text-align: center;
-                width: 100%;
-                padding: 12px;
-                background: rgba(0, 0, 0, 0.4);
-                border: 2px solid var(--border);
-                border-radius: var(--radius-sm);
-                color: var(--text-bright);
-                outline: none;
-                transition: border-color 0.2s;
-                margin-bottom: 16px;
-                -webkit-appearance: none;
-                /* 16px+ prevents iOS auto-zoom on focus */
-            }
-
-            .game-input:focus {
-                border-color: var(--cyan);
-                box-shadow: 0 0 15px rgba(6, 214, 160, 0.15);
-            }
-
-            .game-input::placeholder {
-                color: var(--text-dim);
-                font-size: 0.8rem;
-                letter-spacing: 1px;
+            /* ─── Hidden Input (for keyboard capture) ─── */
+            .hidden-input {
+                position: fixed;
+                left: -9999px;
+                top: 0;
+                opacity: 0;
+                width: 1px;
+                height: 1px;
             }
 
             /* ─── Chunk Mode ─── */
@@ -1057,17 +1037,8 @@
                         <div class="stat-label">XP</div>
                     </div>
                 </div>
-                <div class="digit-display" id="seqDisplay"></div>
-                <input
-                    class="game-input"
-                    id="seqInput"
-                    type="text"
-                    autocomplete="off"
-                    autocorrect="off"
-                    autocapitalize="off"
-                    inputmode="numeric"
-                    placeholder="Tap here, then type digits..."
-                />
+                <div class="digit-display" id="seqDisplay" tabindex="0"></div>
+                <input class="hidden-input" id="seqInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="numeric">
                 <div class="btn-group">
                     <button class="btn btn-primary" id="seqStart">
                         Start Typing
@@ -1185,17 +1156,8 @@
                         <div class="stat-label">Best DPM</div>
                     </div>
                 </div>
-                <div class="digit-display" id="speedDisplay"></div>
-                <input
-                    class="game-input"
-                    id="speedInput"
-                    type="text"
-                    autocomplete="off"
-                    autocorrect="off"
-                    autocapitalize="off"
-                    inputmode="numeric"
-                    placeholder="Tap here, then type digits..."
-                />
+                <div class="digit-display" id="speedDisplay" tabindex="0"></div>
+                <input class="hidden-input" id="speedInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" inputmode="numeric">
                 <div class="btn-group">
                     <button class="btn btn-primary" id="speedStart">
                         Start Challenge
