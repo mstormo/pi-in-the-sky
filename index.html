@@ -2088,20 +2088,20 @@
                         }
                         inp.disabled = true;
                     });
-                    const pct = Math.round(
-                        (correct / fillBlankIndices.length) * 100,
-                    );
+                    const accuracy = correct / fillBlankIndices.length;
+                    const diff = parseInt(document.getElementById("fillDifficulty").value);
+                    const score = Math.round(accuracy * diff);
                     document.getElementById("fillScore").textContent =
-                        pct + "%";
+                        score + "%";
                     state.totalPracticed += fillBlankIndices.length;
                     addXP(correct * 5);
-                    if (pct > state.bestFillScore) {
-                        state.bestFillScore = pct;
+                    if (score > state.bestFillScore) {
+                        state.bestFillScore = score;
                         saveState();
                     }
                     document.getElementById("fillBestScore").textContent =
                         state.bestFillScore + "%";
-                    submitScore("fill", pct);
+                    submitScore("fill", score);
                     checkAchievements();
                 });
 
