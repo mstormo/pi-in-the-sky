@@ -1,0 +1,2391 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1.0, user-scalable=no"
+        />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta
+            name="apple-mobile-web-app-status-bar-style"
+            content="black-translucent"
+        />
+        <meta name="theme-color" content="#050816" />
+        <title>Pi in the Sky</title>
+        <link rel="manifest" href="manifest.json" />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Mono:wght@400;700&display=swap"
+            rel="stylesheet"
+            crossorigin
+        />
+        <style>
+            *,
+            *::before,
+            *::after {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            :root {
+                --bg-deep: #050816;
+                --bg-card: rgba(15, 20, 50, 0.85);
+                --bg-card-hover: rgba(20, 28, 65, 0.9);
+                --cyan: #06d6a0;
+                --cyan-dim: rgba(6, 214, 160, 0.15);
+                --purple: #7c3aed;
+                --purple-dim: rgba(124, 58, 237, 0.15);
+                --pink: #ec4899;
+                --gold: #f59e0b;
+                --gold-dim: rgba(245, 158, 11, 0.15);
+                --red: #ef4444;
+                --text: #e2e8f0;
+                --text-dim: #64748b;
+                --text-bright: #f8fafc;
+                --border: rgba(100, 116, 139, 0.2);
+                --radius: 12px;
+                --radius-sm: 8px;
+                --font-display: "Orbitron", "Courier New", monospace;
+                --font-mono: "Space Mono", "Courier New", monospace;
+                --safe-bottom: env(safe-area-inset-bottom, 0px);
+            }
+
+            html,
+            body {
+                height: 100%;
+                font-family: var(--font-mono);
+                background: var(--bg-deep);
+                color: var(--text);
+                overflow-x: hidden;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            canvas#starfield {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 0;
+                pointer-events: none;
+            }
+
+            #app {
+                position: relative;
+                z-index: 1;
+                max-width: 900px;
+                margin: 0 auto;
+                padding: 20px 16px calc(40px + var(--safe-bottom));
+                min-height: 100vh;
+            }
+
+            /* ─── Header ─── */
+            header {
+                text-align: center;
+                margin-bottom: 24px;
+            }
+
+            header h1 {
+                font-family: var(--font-display);
+                font-size: clamp(1.8rem, 5vw, 2.6rem);
+                font-weight: 800;
+                letter-spacing: 2px;
+                background: linear-gradient(
+                    135deg,
+                    var(--cyan),
+                    var(--purple),
+                    var(--pink)
+                );
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                background-clip: text;
+                filter: drop-shadow(0 0 20px rgba(6, 214, 160, 0.3));
+                margin-bottom: 4px;
+            }
+
+            header .subtitle {
+                font-size: 0.75rem;
+                color: var(--text-dim);
+                letter-spacing: 4px;
+                text-transform: uppercase;
+            }
+
+            /* ─── Level Bar ─── */
+            .level-bar-wrap {
+                margin: 16px auto 0;
+                max-width: 500px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .level-badge {
+                font-family: var(--font-display);
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: var(--gold);
+                background: var(--gold-dim);
+                border: 1px solid rgba(245, 158, 11, 0.3);
+                padding: 4px 10px;
+                border-radius: 20px;
+                white-space: nowrap;
+                min-width: 65px;
+                text-align: center;
+            }
+
+            .level-track {
+                flex: 1;
+                height: 8px;
+                background: rgba(100, 116, 139, 0.15);
+                border-radius: 4px;
+                overflow: hidden;
+            }
+
+            .level-fill {
+                height: 100%;
+                background: linear-gradient(90deg, var(--gold), #fbbf24);
+                border-radius: 4px;
+                transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+                box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
+            }
+
+            .xp-label {
+                font-size: 0.65rem;
+                color: var(--text-dim);
+                white-space: nowrap;
+                min-width: 80px;
+                text-align: right;
+            }
+
+            /* ─── Tabs ─── */
+            .tabs {
+                display: flex;
+                gap: 4px;
+                margin-bottom: 20px;
+                overflow-x: auto;
+                scrollbar-width: none;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 2px;
+            }
+
+            .tabs::-webkit-scrollbar {
+                display: none;
+            }
+
+            .tab-btn {
+                font-family: var(--font-display);
+                font-size: 0.6rem;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                padding: 10px 14px;
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                color: var(--text-dim);
+                cursor: pointer;
+                white-space: nowrap;
+                transition: all 0.25s ease;
+                flex-shrink: 0;
+                -webkit-appearance: none;
+                touch-action: manipulation;
+            }
+
+            .tab-btn:hover {
+                color: var(--text);
+                background: var(--bg-card-hover);
+                border-color: rgba(100, 116, 139, 0.35);
+            }
+
+            .tab-btn.active {
+                color: var(--cyan);
+                background: var(--cyan-dim);
+                border-color: rgba(6, 214, 160, 0.35);
+                box-shadow: 0 0 15px rgba(6, 214, 160, 0.1);
+            }
+
+            /* ─── Panels ─── */
+            .panel {
+                display: none;
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 24px 20px;
+                backdrop-filter: blur(10px);
+                animation: panelIn 0.3s ease;
+            }
+
+            .panel.active {
+                display: block;
+            }
+
+            @keyframes panelIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            .panel h2 {
+                font-family: var(--font-display);
+                font-size: 1rem;
+                font-weight: 700;
+                color: var(--text-bright);
+                margin-bottom: 6px;
+            }
+
+            .panel .mode-desc {
+                font-size: 0.75rem;
+                color: var(--text-dim);
+                margin-bottom: 20px;
+                line-height: 1.5;
+            }
+
+            /* ─── Digit Display ─── */
+            .digit-display {
+                font-family: var(--font-mono);
+                font-size: clamp(1rem, 3vw, 1.5rem);
+                line-height: 2;
+                word-break: break-all;
+                letter-spacing: 2px;
+                margin-bottom: 20px;
+                min-height: 60px;
+                padding: 14px;
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border);
+            }
+
+            .d-ok {
+                color: var(--cyan);
+                text-shadow: 0 0 8px rgba(6, 214, 160, 0.5);
+            }
+            .d-err {
+                color: var(--red);
+                text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+            }
+            .d-dim {
+                color: var(--text-dim);
+            }
+            .d-cur {
+                color: var(--text-bright);
+                animation: blink 1s step-end infinite;
+                text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            }
+            .d-pre {
+                color: var(--purple);
+                text-shadow: 0 0 6px rgba(124, 58, 237, 0.4);
+            }
+
+            @keyframes blink {
+                50% {
+                    opacity: 0;
+                }
+            }
+
+            /* ─── Stat Row ─── */
+            .stat-row {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-bottom: 16px;
+            }
+
+            .stat-box {
+                flex: 1;
+                min-width: 80px;
+                background: rgba(0, 0, 0, 0.25);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                padding: 10px 8px;
+                text-align: center;
+            }
+
+            .stat-box .stat-value {
+                font-family: var(--font-display);
+                font-size: 1.3rem;
+                font-weight: 700;
+                color: var(--cyan);
+            }
+
+            .stat-box .stat-label {
+                font-size: 0.55rem;
+                color: var(--text-dim);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                margin-top: 2px;
+            }
+
+            /* ─── Buttons ─── */
+            .btn {
+                font-family: var(--font-display);
+                font-size: 0.7rem;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                padding: 12px 24px;
+                border: none;
+                border-radius: var(--radius-sm);
+                cursor: pointer;
+                transition: all 0.2s ease;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                -webkit-appearance: none;
+                touch-action: manipulation;
+            }
+
+            .btn-primary {
+                background: linear-gradient(135deg, var(--cyan), #0891b2);
+                color: var(--bg-deep);
+                box-shadow: 0 0 20px rgba(6, 214, 160, 0.25);
+            }
+
+            .btn-primary:hover {
+                box-shadow: 0 0 30px rgba(6, 214, 160, 0.4);
+                transform: translateY(-1px);
+            }
+
+            .btn-primary:active {
+                transform: translateY(0);
+            }
+
+            .btn-secondary {
+                background: rgba(100, 116, 139, 0.15);
+                color: var(--text);
+                border: 1px solid var(--border);
+            }
+
+            .btn-secondary:hover {
+                background: rgba(100, 116, 139, 0.25);
+            }
+
+            .btn-gold {
+                background: linear-gradient(135deg, var(--gold), #d97706);
+                color: var(--bg-deep);
+                box-shadow: 0 0 20px rgba(245, 158, 11, 0.25);
+            }
+
+            .btn-group {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            /* ─── Game Input (visible, mobile-friendly) ─── */
+            .game-input {
+                font-family: var(--font-mono);
+                font-size: 1.4rem;
+                letter-spacing: 4px;
+                text-align: center;
+                width: 100%;
+                padding: 12px;
+                background: rgba(0, 0, 0, 0.4);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-sm);
+                color: var(--text-bright);
+                outline: none;
+                transition: border-color 0.2s;
+                margin-bottom: 16px;
+                -webkit-appearance: none;
+                /* 16px+ prevents iOS auto-zoom on focus */
+            }
+
+            .game-input:focus {
+                border-color: var(--cyan);
+                box-shadow: 0 0 15px rgba(6, 214, 160, 0.15);
+            }
+
+            .game-input::placeholder {
+                color: var(--text-dim);
+                font-size: 0.8rem;
+                letter-spacing: 1px;
+            }
+
+            /* ─── Chunk Mode ─── */
+            .chunk-display {
+                font-family: var(--font-mono);
+                font-size: clamp(1.8rem, 6vw, 3.2rem);
+                text-align: center;
+                padding: 24px 16px;
+                letter-spacing: 8px;
+                color: var(--cyan);
+                text-shadow:
+                    0 0 20px rgba(6, 214, 160, 0.5),
+                    0 0 40px rgba(6, 214, 160, 0.2);
+                min-height: 90px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border);
+                margin-bottom: 16px;
+            }
+
+            .chunk-display.hidden-chunk {
+                color: var(--text-dim);
+                text-shadow: none;
+                font-size: 1rem;
+                letter-spacing: 2px;
+            }
+
+            .chunk-input {
+                font-family: var(--font-mono);
+                font-size: clamp(1.4rem, 4vw, 1.8rem);
+                letter-spacing: 6px;
+                text-align: center;
+                width: 100%;
+                padding: 14px;
+                background: rgba(0, 0, 0, 0.4);
+                border: 2px solid var(--border);
+                border-radius: var(--radius-sm);
+                color: var(--text-bright);
+                outline: none;
+                transition: border-color 0.2s;
+                margin-bottom: 16px;
+                -webkit-appearance: none;
+            }
+
+            .chunk-input:focus {
+                border-color: var(--cyan);
+                box-shadow: 0 0 15px rgba(6, 214, 160, 0.15);
+            }
+
+            .chunk-progress {
+                display: flex;
+                gap: 3px;
+                margin-bottom: 16px;
+                flex-wrap: wrap;
+            }
+
+            .chunk-dot {
+                width: 24px;
+                height: 5px;
+                border-radius: 3px;
+                background: rgba(100, 116, 139, 0.2);
+                transition: background 0.3s;
+            }
+
+            .chunk-dot.mastered {
+                background: var(--cyan);
+                box-shadow: 0 0 6px rgba(6, 214, 160, 0.4);
+            }
+
+            .chunk-dot.current {
+                background: var(--purple);
+                box-shadow: 0 0 6px rgba(124, 58, 237, 0.4);
+            }
+
+            /* ─── Fill Mode ─── */
+            .fill-grid {
+                font-family: var(--font-mono);
+                font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+                line-height: 2.4;
+                word-break: break-all;
+                letter-spacing: 1px;
+                margin-bottom: 20px;
+                padding: 14px;
+                background: rgba(0, 0, 0, 0.3);
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border);
+            }
+
+            .fill-blank {
+                display: inline-block;
+                width: 1.4em;
+                height: 1.5em;
+                text-align: center;
+                border: none;
+                border-bottom: 2px solid var(--purple);
+                background: rgba(124, 58, 237, 0.1);
+                color: var(--text-bright);
+                font-family: var(--font-mono);
+                font-size: inherit;
+                outline: none;
+                border-radius: 2px;
+                transition: all 0.2s;
+                padding: 0;
+                margin: 0 1px;
+                vertical-align: baseline;
+                -webkit-appearance: none;
+            }
+
+            .fill-blank:focus {
+                border-bottom-color: var(--cyan);
+                background: rgba(6, 214, 160, 0.1);
+                box-shadow: 0 2px 8px rgba(6, 214, 160, 0.2);
+            }
+
+            .fill-blank.correct {
+                color: var(--cyan);
+                border-bottom-color: var(--cyan);
+                background: rgba(6, 214, 160, 0.15);
+            }
+
+            .fill-blank.wrong {
+                color: var(--red);
+                border-bottom-color: var(--red);
+                background: rgba(239, 68, 68, 0.15);
+            }
+
+            .fill-known {
+                color: var(--text-dim);
+            }
+
+            .fill-controls {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+
+            .fill-controls label {
+                font-size: 0.7rem;
+                color: var(--text-dim);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+            }
+
+            .fill-controls input[type="range"] {
+                flex: 1;
+                min-width: 100px;
+                accent-color: var(--purple);
+            }
+
+            .fill-controls .diff-val {
+                font-family: var(--font-display);
+                font-size: 0.8rem;
+                color: var(--purple);
+                font-weight: 700;
+                min-width: 35px;
+            }
+
+            /* ─── Speed Mode ─── */
+            .speed-timer {
+                font-family: var(--font-display);
+                font-size: clamp(2.2rem, 8vw, 4rem);
+                font-weight: 900;
+                text-align: center;
+                margin-bottom: 16px;
+                transition: color 0.3s;
+            }
+
+            .speed-timer.running {
+                color: var(--cyan);
+                text-shadow: 0 0 30px rgba(6, 214, 160, 0.4);
+            }
+            .speed-timer.warning {
+                color: var(--gold);
+                text-shadow: 0 0 30px rgba(245, 158, 11, 0.4);
+            }
+            .speed-timer.danger {
+                color: var(--red);
+                text-shadow: 0 0 30px rgba(239, 68, 68, 0.4);
+            }
+            .speed-timer.idle {
+                color: var(--text-dim);
+            }
+
+            /* ─── Stats Tab ─── */
+            .achievements-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+                gap: 8px;
+                margin-top: 16px;
+            }
+
+            .achievement {
+                padding: 12px 8px;
+                background: rgba(0, 0, 0, 0.25);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                text-align: center;
+                transition: all 0.3s;
+                opacity: 0.35;
+            }
+
+            .achievement.unlocked {
+                opacity: 1;
+                border-color: rgba(245, 158, 11, 0.4);
+                background: var(--gold-dim);
+            }
+
+            .achievement .ach-icon {
+                font-size: 1.5rem;
+                margin-bottom: 4px;
+            }
+
+            .achievement .ach-name {
+                font-family: var(--font-display);
+                font-size: 0.55rem;
+                font-weight: 700;
+                color: var(--text-bright);
+                margin-bottom: 2px;
+            }
+
+            .achievement .ach-desc {
+                font-size: 0.55rem;
+                color: var(--text-dim);
+                line-height: 1.3;
+            }
+
+            .highscore-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 12px;
+                font-size: 0.75rem;
+            }
+
+            .highscore-table th {
+                font-family: var(--font-display);
+                font-size: 0.55rem;
+                letter-spacing: 1px;
+                text-transform: uppercase;
+                color: var(--text-dim);
+                text-align: left;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .highscore-table td {
+                padding: 10px;
+                border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+            }
+
+            .highscore-table .hs-value {
+                font-family: var(--font-display);
+                font-weight: 700;
+                color: var(--cyan);
+            }
+
+            /* ─── Digit Count Setting ─── */
+            .digit-setting {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 20px;
+                padding: 10px 14px;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border);
+            }
+
+            .digit-setting label {
+                font-size: 0.6rem;
+                color: var(--text-dim);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                white-space: nowrap;
+            }
+
+            .digit-setting input[type="range"] {
+                flex: 1;
+                accent-color: var(--cyan);
+                min-width: 80px;
+            }
+
+            .digit-setting .digit-count-val {
+                font-family: var(--font-display);
+                font-size: 0.85rem;
+                font-weight: 700;
+                color: var(--cyan);
+                min-width: 35px;
+                text-align: right;
+            }
+
+            /* ─── Toast ─── */
+            .toast-container {
+                position: fixed;
+                top: 16px;
+                left: 50%;
+                transform: translateX(-50%);
+                z-index: 100;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                width: 90%;
+                max-width: 360px;
+                pointer-events: none;
+            }
+
+            .toast {
+                font-family: var(--font-display);
+                font-size: 0.7rem;
+                padding: 12px 20px;
+                background: rgba(15, 20, 50, 0.95);
+                border: 1px solid rgba(245, 158, 11, 0.5);
+                border-radius: var(--radius-sm);
+                color: var(--gold);
+                box-shadow:
+                    0 4px 20px rgba(0, 0, 0, 0.5),
+                    0 0 20px rgba(245, 158, 11, 0.15);
+                animation:
+                    toastIn 0.4s ease,
+                    toastOut 0.4s ease 2.6s forwards;
+                text-align: center;
+            }
+
+            @keyframes toastIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+
+            @keyframes toastOut {
+                from {
+                    opacity: 1;
+                }
+                to {
+                    opacity: 0;
+                }
+            }
+
+            /* ─── Shake ─── */
+            @keyframes shake {
+                0%,
+                100% {
+                    transform: translateX(0);
+                }
+                20% {
+                    transform: translateX(-4px);
+                }
+                40% {
+                    transform: translateX(4px);
+                }
+                60% {
+                    transform: translateX(-3px);
+                }
+                80% {
+                    transform: translateX(3px);
+                }
+            }
+
+            .shake {
+                animation: shake 0.3s ease;
+            }
+
+            /* ─── Section Separator ─── */
+            .section-title {
+                font-family: var(--font-display);
+                font-size: 0.6rem;
+                font-weight: 600;
+                letter-spacing: 2px;
+                text-transform: uppercase;
+                color: var(--text-dim);
+                margin: 24px 0 12px;
+                padding-bottom: 6px;
+                border-bottom: 1px solid var(--border);
+            }
+
+            /* ─── Player Name ─── */
+            .player-wrap {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 16px;
+                padding: 10px 14px;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: var(--radius-sm);
+                border: 1px solid var(--border);
+            }
+
+            .player-wrap label {
+                font-size: 0.6rem;
+                color: var(--text-dim);
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                white-space: nowrap;
+            }
+
+            .player-wrap input {
+                flex: 1;
+                font-family: var(--font-mono);
+                font-size: 0.85rem;
+                padding: 6px 10px;
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                color: var(--text-bright);
+                outline: none;
+                min-width: 0;
+                -webkit-appearance: none;
+            }
+
+            .player-wrap input:focus {
+                border-color: var(--purple);
+            }
+
+            .player-wrap input::placeholder {
+                color: var(--text-dim);
+                font-size: 0.7rem;
+            }
+
+            /* ─── Global Leaderboard ─── */
+            .lb-modes {
+                display: flex;
+                gap: 4px;
+                margin-bottom: 12px;
+                flex-wrap: wrap;
+            }
+
+            .lb-mode-btn {
+                font-family: var(--font-display);
+                font-size: 0.55rem;
+                font-weight: 600;
+                padding: 6px 12px;
+                background: rgba(0, 0, 0, 0.25);
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                color: var(--text-dim);
+                cursor: pointer;
+                transition: all 0.2s;
+                -webkit-appearance: none;
+                touch-action: manipulation;
+            }
+
+            .lb-mode-btn.active {
+                color: var(--purple);
+                background: var(--purple-dim);
+                border-color: rgba(124, 58, 237, 0.35);
+            }
+
+            .lb-entry {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 8px 12px;
+                border-bottom: 1px solid rgba(100, 116, 139, 0.1);
+            }
+
+            .lb-entry:last-child {
+                border-bottom: none;
+            }
+
+            .lb-rank {
+                font-family: var(--font-display);
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: var(--text-dim);
+                min-width: 24px;
+                text-align: center;
+            }
+
+            .lb-entry:nth-child(1) .lb-rank {
+                color: #fbbf24;
+            }
+            .lb-entry:nth-child(2) .lb-rank {
+                color: #94a3b8;
+            }
+            .lb-entry:nth-child(3) .lb-rank {
+                color: #b45309;
+            }
+
+            .lb-name {
+                flex: 1;
+                font-size: 0.8rem;
+                color: var(--text);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .lb-name.lb-you {
+                color: var(--cyan);
+                font-weight: 700;
+            }
+
+            .lb-score {
+                font-family: var(--font-display);
+                font-size: 0.85rem;
+                font-weight: 700;
+                color: var(--cyan);
+            }
+
+            .lb-empty {
+                font-size: 0.75rem;
+                color: var(--text-dim);
+                text-align: center;
+                padding: 16px;
+                font-style: italic;
+            }
+
+            .lb-status {
+                font-size: 0.65rem;
+                color: var(--text-dim);
+                text-align: center;
+                padding: 12px;
+            }
+
+            .lb-board {
+                background: rgba(0, 0, 0, 0.2);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                overflow: hidden;
+            }
+
+            /* ─── Tribute Footer ─── */
+            .tribute {
+                text-align: center;
+                margin-top: 32px;
+                padding: 16px;
+                font-size: 0.7rem;
+                font-style: italic;
+                color: var(--text-dim);
+                letter-spacing: 0.5px;
+                opacity: 0.7;
+                background: linear-gradient(
+                    90deg,
+                    transparent,
+                    rgba(124, 58, 237, 0.06),
+                    transparent
+                );
+                border-top: 1px solid rgba(124, 58, 237, 0.15);
+            }
+
+            /* ─── Responsive ─── */
+            @media (max-width: 480px) {
+                #app {
+                    padding: 12px 8px calc(30px + var(--safe-bottom));
+                }
+                .panel {
+                    padding: 18px 14px;
+                }
+                .stat-box .stat-value {
+                    font-size: 1.1rem;
+                }
+                .btn {
+                    padding: 11px 18px;
+                    font-size: 0.65rem;
+                }
+                .achievements-grid {
+                    grid-template-columns: repeat(
+                        auto-fill,
+                        minmax(110px, 1fr)
+                    );
+                }
+                .level-bar-wrap {
+                    gap: 8px;
+                }
+                .chunk-dot {
+                    width: 16px;
+                    height: 4px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <canvas id="starfield"></canvas>
+
+        <div id="app">
+            <header>
+                <h1>Pi in the Sky</h1>
+                <div class="subtitle">Master the infinite</div>
+                <div class="level-bar-wrap">
+                    <div class="level-badge" id="levelBadge">LVL 1</div>
+                    <div class="level-track">
+                        <div
+                            class="level-fill"
+                            id="levelFill"
+                            style="width: 0%"
+                        ></div>
+                    </div>
+                    <div class="xp-label" id="xpLabel">0 / 100 XP</div>
+                </div>
+            </header>
+
+            <div class="player-wrap">
+                <label>Player</label>
+                <input
+                    type="text"
+                    id="playerName"
+                    maxlength="20"
+                    placeholder="Enter your name..."
+                    autocomplete="off"
+                />
+            </div>
+
+            <div class="digit-setting">
+                <label>Digits</label>
+                <input
+                    type="range"
+                    id="digitCountSlider"
+                    min="10"
+                    max="1000"
+                    step="10"
+                    value="100"
+                />
+                <div class="digit-count-val" id="digitCountVal">100</div>
+            </div>
+
+            <nav class="tabs" id="tabsNav">
+                <button class="tab-btn active" data-tab="sequential">
+                    Sequential
+                </button>
+                <button class="tab-btn" data-tab="chunks">Chunks</button>
+                <button class="tab-btn" data-tab="fill">Fill Blanks</button>
+                <button class="tab-btn" data-tab="speed">Speed</button>
+                <button class="tab-btn" data-tab="stats">Stats</button>
+            </nav>
+
+            <!-- Sequential Mode -->
+            <div class="panel active" id="panel-sequential">
+                <h2>Sequential Recall</h2>
+                <p class="mode-desc">
+                    Type the digits of Pi from memory. How far can you go?
+                </p>
+                <div class="stat-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="seqCurrent">0</div>
+                        <div class="stat-label">Current</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="seqBest">0</div>
+                        <div class="stat-label">Best</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="seqXP">0</div>
+                        <div class="stat-label">XP</div>
+                    </div>
+                </div>
+                <div class="digit-display" id="seqDisplay"></div>
+                <input
+                    class="game-input"
+                    id="seqInput"
+                    type="text"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    inputmode="numeric"
+                    placeholder="Tap here, then type digits..."
+                />
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="seqStart">
+                        Start Typing
+                    </button>
+                    <button class="btn btn-secondary" id="seqReset">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Chunk Mode -->
+            <div class="panel" id="panel-chunks">
+                <h2>Chunk Learning</h2>
+                <p class="mode-desc">
+                    Learn Pi in groups of 5. Memorize, then type from memory.
+                    Master each chunk 3 times to advance.
+                </p>
+                <div class="stat-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="chunkNum">1</div>
+                        <div class="stat-label">Chunk</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="chunkRep">0/3</div>
+                        <div class="stat-label">Reps</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="chunkMastered">0</div>
+                        <div class="stat-label">Mastered</div>
+                    </div>
+                </div>
+                <div class="chunk-progress" id="chunkProgress"></div>
+                <div class="chunk-display" id="chunkDisplay">
+                    Press Start to begin
+                </div>
+                <input
+                    class="chunk-input"
+                    id="chunkInput"
+                    type="text"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    inputmode="numeric"
+                    placeholder="Type the chunk..."
+                    style="display: none"
+                />
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="chunkStart">
+                        Start Learning
+                    </button>
+                    <button class="btn btn-secondary" id="chunkRestart">
+                        Restart
+                    </button>
+                </div>
+            </div>
+
+            <!-- Fill Blanks Mode -->
+            <div class="panel" id="panel-fill">
+                <h2>Fill the Blanks</h2>
+                <p class="mode-desc">
+                    Some digits are hidden. Fill them in from memory.
+                </p>
+                <div class="fill-controls">
+                    <label>Difficulty</label>
+                    <input
+                        type="range"
+                        id="fillDifficulty"
+                        min="20"
+                        max="80"
+                        step="5"
+                        value="40"
+                    />
+                    <div class="diff-val" id="fillDiffVal">40%</div>
+                    <button class="btn btn-primary" id="fillGenerate">
+                        New Puzzle
+                    </button>
+                </div>
+                <div class="fill-grid" id="fillGrid"></div>
+                <div class="stat-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="fillScore">-</div>
+                        <div class="stat-label">Score</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="fillBestScore">0</div>
+                        <div class="stat-label">Best</div>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-gold" id="fillCheck">
+                        Check Answers
+                    </button>
+                </div>
+            </div>
+
+            <!-- Speed Mode -->
+            <div class="panel" id="panel-speed">
+                <h2>Speed Challenge</h2>
+                <p class="mode-desc">
+                    60 seconds. Type as many correct digits as you can. One
+                    wrong digit ends the run!
+                </p>
+                <div class="speed-timer idle" id="speedTimer">60.0</div>
+                <div class="stat-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="speedDigits">0</div>
+                        <div class="stat-label">Digits</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="speedDPM">0</div>
+                        <div class="stat-label">DPM</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="speedBest">0</div>
+                        <div class="stat-label">Best DPM</div>
+                    </div>
+                </div>
+                <div class="digit-display" id="speedDisplay"></div>
+                <input
+                    class="game-input"
+                    id="speedInput"
+                    type="text"
+                    autocomplete="off"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    inputmode="numeric"
+                    placeholder="Tap here, then type digits..."
+                />
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="speedStart">
+                        Start Challenge
+                    </button>
+                    <button class="btn btn-secondary" id="speedReset">
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div class="panel" id="panel-stats">
+                <h2>Your Journey</h2>
+                <p class="mode-desc">
+                    Track your progress across all training modes.
+                </p>
+
+                <div class="stat-row">
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalXP">0</div>
+                        <div class="stat-label">Total XP</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalLevel">1</div>
+                        <div class="stat-label">Level</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalPracticed">0</div>
+                        <div class="stat-label">Practiced</div>
+                    </div>
+                </div>
+
+                <div class="section-title">High Scores</div>
+                <table class="highscore-table">
+                    <thead>
+                        <tr>
+                            <th>Mode</th>
+                            <th>Metric</th>
+                            <th>Best</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Sequential</td>
+                            <td>Streak</td>
+                            <td class="hs-value" id="hsBestStreak">0</td>
+                        </tr>
+                        <tr>
+                            <td>Chunks</td>
+                            <td>Mastered</td>
+                            <td class="hs-value" id="hsChunks">0</td>
+                        </tr>
+                        <tr>
+                            <td>Fill</td>
+                            <td>Score</td>
+                            <td class="hs-value" id="hsFillBest">0</td>
+                        </tr>
+                        <tr>
+                            <td>Speed</td>
+                            <td>DPM</td>
+                            <td class="hs-value" id="hsBestDPM">0</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="section-title">Global Leaderboard</div>
+                <div class="lb-modes" id="lbModes">
+                    <button class="lb-mode-btn active" data-mode="sequential">
+                        Sequential
+                    </button>
+                    <button class="lb-mode-btn" data-mode="chunks">
+                        Chunks
+                    </button>
+                    <button class="lb-mode-btn" data-mode="fill">Fill</button>
+                    <button class="lb-mode-btn" data-mode="speed">Speed</button>
+                </div>
+                <div class="lb-board" id="lbBoard">
+                    <div class="lb-status" id="lbStatus">Loading...</div>
+                </div>
+
+                <div class="section-title">Achievements</div>
+                <div class="achievements-grid" id="achievementsGrid"></div>
+
+                <div style="margin-top: 24px">
+                    <button class="btn btn-secondary" id="resetAll">
+                        Reset All Progress
+                    </button>
+                </div>
+            </div>
+
+            <footer class="tribute">
+                For Lene Sofia, Elina & Mia<br />Whose curiosity reaches further
+                than any number
+            </footer>
+        </div>
+
+        <div class="toast-container" id="toastContainer"></div>
+
+        <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+
+        <script>
+            // ─── PI (1000 digits after the decimal) ───
+            const PI_DIGITS =
+                "1415926535897932384626433832795028841971693993751058209749445923078164062862089986280348253421170679821480865132823066470938446095505822317253594081284811174502841027019385211055596446229489549303819644288109756659334461284756482337867831652712019091456485669234603486104543266482133936072602491412737245870066063155881748815209209628292540917153643678925903600113305305488204665213841469519415116094330572703657595919530921861173819326117931051185480744623799627495673518857527248912279381830119491298336733624406566430860213949463952247371907021798609437027705392171762931767523846748184676694051320005681271452635608277857713427577896091736371787214684409012249534301465495853710507922796892589235420199561121290219608640344181598136297747713099605187072113499999983729780499510597317328160963185950244594553469083026425223082533446850352619311881710100031378387528865875332083814206171776691473035982534904287554687311595628638823537875937519577818577805321712268066130019278766111959092164201989";
+
+            let maxDigits = 100;
+            function getDigits() {
+                return PI_DIGITS.slice(0, maxDigits);
+            }
+
+            // ═══════════════════════════════════════════
+            // FIREBASE GLOBAL LEADERBOARD
+            // ═══════════════════════════════════════════
+            var FIREBASE_CONFIG = {
+                apiKey: "AIzaSyBEr4xUn383WGR3Gi91fAe6E2-EDJyE7JA",
+                authDomain: "pi-in-the-sky-2026.firebaseapp.com",
+                projectId: "pi-in-the-sky-2026",
+                storageBucket: "pi-in-the-sky-2026.firebasestorage.app",
+                messagingSenderId: "42454157557",
+                appId: "1:42454157557:web:d89e2ae074709a46151dbc",
+            };
+
+            var db = null;
+            try {
+                if (FIREBASE_CONFIG && typeof firebase !== "undefined") {
+                    firebase.initializeApp(FIREBASE_CONFIG);
+                    db = firebase.firestore();
+                }
+            } catch (e) {
+                /* Firebase not available */
+            }
+
+            // Player name (persisted in localStorage)
+            var playerName = localStorage.getItem("pisky_name") || "";
+            (function () {
+                var nameInput = document.getElementById("playerName");
+                nameInput.value = playerName;
+                nameInput.addEventListener("input", function () {
+                    playerName = this.value.trim().slice(0, 20);
+                    localStorage.setItem("pisky_name", playerName);
+                });
+            })();
+
+            function getPlayerName() {
+                return playerName || "Anonymous";
+            }
+
+            // Submit a score to Firestore
+            function submitScore(mode, score) {
+                if (!db || score <= 0) return;
+                var name = getPlayerName();
+                db.collection("scores")
+                    .add({
+                        name: name,
+                        mode: mode,
+                        score: score,
+                        timestamp:
+                            firebase.firestore.FieldValue.serverTimestamp(),
+                    })
+                    .catch(function () {});
+            }
+
+            // Fetch top scores for a mode (returns best per player)
+            var lbCache = {};
+            function fetchLeaderboard(mode, forceRefresh) {
+                if (!db) return Promise.resolve(null);
+                if (
+                    !forceRefresh &&
+                    lbCache[mode] &&
+                    Date.now() - lbCache[mode].time < 30000
+                ) {
+                    return Promise.resolve(lbCache[mode].data);
+                }
+                // Single orderBy avoids needing a composite Firestore index
+                return db
+                    .collection("scores")
+                    .orderBy("score", "desc")
+                    .limit(200)
+                    .get()
+                    .then(function (snap) {
+                        // Filter by mode client-side, deduplicate per player
+                        var best = {};
+                        snap.docs.forEach(function (doc) {
+                            var d = doc.data();
+                            if (d.mode !== mode) return;
+                            if (!best[d.name] || d.score > best[d.name].score) {
+                                best[d.name] = d;
+                            }
+                        });
+                        var sorted = Object.values(best)
+                            .sort(function (a, b) {
+                                return b.score - a.score;
+                            })
+                            .slice(0, 10);
+                        lbCache[mode] = { data: sorted, time: Date.now() };
+                        return sorted;
+                    })
+                    .catch(function (err) {
+                        console.error("Leaderboard fetch failed:", err);
+                        return null;
+                    });
+            }
+
+            // Render leaderboard into the DOM
+            var currentLbMode = "sequential";
+
+            function renderLeaderboard(entries) {
+                var board = document.getElementById("lbBoard");
+                clearChildren(board);
+
+                if (entries === null) {
+                    board.appendChild(
+                        el("div", {
+                            className: "lb-status",
+                            textContent:
+                                "Set up Firebase to enable global scores (see SETUP.md)",
+                        }),
+                    );
+                    return;
+                }
+                if (entries.length === 0) {
+                    board.appendChild(
+                        el("div", {
+                            className: "lb-empty",
+                            textContent: "No scores yet. Be the first!",
+                        }),
+                    );
+                    return;
+                }
+
+                var units = {
+                    sequential: " digits",
+                    chunks: " chunks",
+                    fill: "%",
+                    speed: " DPM",
+                };
+                var myName = getPlayerName();
+
+                entries.forEach(function (entry, i) {
+                    var isMe = entry.name === myName;
+                    var row = el("div", { className: "lb-entry" }, [
+                        el("div", {
+                            className: "lb-rank",
+                            textContent: "#" + (i + 1),
+                        }),
+                        el("div", {
+                            className: "lb-name" + (isMe ? " lb-you" : ""),
+                            textContent: entry.name,
+                        }),
+                        el("div", {
+                            className: "lb-score",
+                            textContent:
+                                entry.score + (units[currentLbMode] || ""),
+                        }),
+                    ]);
+                    board.appendChild(row);
+                });
+            }
+
+            function refreshLeaderboard(forceRefresh) {
+                var board = document.getElementById("lbBoard");
+                clearChildren(board);
+                board.appendChild(
+                    el("div", {
+                        className: "lb-status",
+                        textContent: "Loading...",
+                    }),
+                );
+
+                fetchLeaderboard(currentLbMode, forceRefresh).then(
+                    renderLeaderboard,
+                );
+            }
+
+            // Leaderboard mode tabs
+            document
+                .getElementById("lbModes")
+                .addEventListener("click", function (e) {
+                    var btn = e.target.closest(".lb-mode-btn");
+                    if (!btn) return;
+                    document
+                        .querySelectorAll(".lb-mode-btn")
+                        .forEach(function (b) {
+                            b.classList.remove("active");
+                        });
+                    btn.classList.add("active");
+                    currentLbMode = btn.getAttribute("data-mode");
+                    refreshLeaderboard();
+                });
+
+            // ─── Helpers for safe DOM building ───
+            function el(tag, attrs, children) {
+                const e = document.createElement(tag);
+                if (attrs) {
+                    for (const [k, v] of Object.entries(attrs)) {
+                        if (k === "className") e.className = v;
+                        else if (k === "textContent") e.textContent = v;
+                        else if (k.startsWith("on"))
+                            e.addEventListener(k.slice(2), v);
+                        else e.setAttribute(k, v);
+                    }
+                }
+                if (children) {
+                    if (typeof children === "string") e.textContent = children;
+                    else if (Array.isArray(children))
+                        children.forEach((c) => {
+                            if (c) e.appendChild(c);
+                        });
+                    else e.appendChild(children);
+                }
+                return e;
+            }
+
+            function span(className, text) {
+                const s = document.createElement("span");
+                if (className) s.className = className;
+                s.textContent = text;
+                return s;
+            }
+
+            function clearChildren(parent) {
+                while (parent.firstChild) parent.removeChild(parent.firstChild);
+            }
+
+            // ─── State & Cookie Persistence ───
+            const DEFAULT_STATE = {
+                xp: 0,
+                bestStreak: 0,
+                chunksLearned: 0,
+                bestFillScore: 0,
+                bestDPM: 0,
+                totalPracticed: 0,
+                achievements: [],
+            };
+
+            function loadState() {
+                try {
+                    for (const c of document.cookie.split(";")) {
+                        const [name, val] = c.trim().split("=");
+                        if (name === "pisky")
+                            return {
+                                ...DEFAULT_STATE,
+                                ...JSON.parse(decodeURIComponent(val)),
+                            };
+                    }
+                } catch (e) {
+                    /* ignore */
+                }
+                return { ...DEFAULT_STATE, achievements: [] };
+            }
+
+            function saveState() {
+                const d = new Date();
+                d.setFullYear(d.getFullYear() + 5);
+                document.cookie =
+                    "pisky=" +
+                    encodeURIComponent(JSON.stringify(state)) +
+                    ";expires=" +
+                    d.toUTCString() +
+                    ";path=/;SameSite=Lax";
+            }
+
+            let state = loadState();
+
+            // ─── Achievements ───
+            const ACHIEVEMENTS = [
+                {
+                    id: "first10",
+                    icon: "\u{1F31F}",
+                    name: "First Steps",
+                    desc: "10 digit streak",
+                    check: () => state.bestStreak >= 10,
+                },
+                {
+                    id: "quarter",
+                    icon: "\u{1FA90}",
+                    name: "Quarter Way",
+                    desc: "25 digit streak",
+                    check: () => state.bestStreak >= 25,
+                },
+                {
+                    id: "half50",
+                    icon: "\u2B50",
+                    name: "Half Century",
+                    desc: "50 digit streak",
+                    check: () => state.bestStreak >= 50,
+                },
+                {
+                    id: "century",
+                    icon: "\u{1F30C}",
+                    name: "Century Club",
+                    desc: "100 digit streak",
+                    check: () => state.bestStreak >= 100,
+                },
+                {
+                    id: "bicentury",
+                    icon: "\u{1F320}",
+                    name: "Deep Space",
+                    desc: "200 digit streak",
+                    check: () => state.bestStreak >= 200,
+                },
+                {
+                    id: "chunk5",
+                    icon: "\u{1F9E9}",
+                    name: "Chunk Novice",
+                    desc: "Master 5 chunks",
+                    check: () => state.chunksLearned >= 5,
+                },
+                {
+                    id: "chunk20",
+                    icon: "\u{1F3AF}",
+                    name: "Chunk Master",
+                    desc: "Master 20 chunks",
+                    check: () => state.chunksLearned >= 20,
+                },
+                {
+                    id: "speed30",
+                    icon: "\u26A1",
+                    name: "Quick Fingers",
+                    desc: "30+ DPM",
+                    check: () => state.bestDPM >= 30,
+                },
+                {
+                    id: "speed60",
+                    icon: "\u{1F525}",
+                    name: "Speed Demon",
+                    desc: "60+ DPM",
+                    check: () => state.bestDPM >= 60,
+                },
+                {
+                    id: "speed100",
+                    icon: "\u{1F680}",
+                    name: "Lightspeed",
+                    desc: "100+ DPM",
+                    check: () => state.bestDPM >= 100,
+                },
+                {
+                    id: "fill90",
+                    icon: "\u{1F9E0}",
+                    name: "Sharp Mind",
+                    desc: "90%+ fill score",
+                    check: () => state.bestFillScore >= 90,
+                },
+                {
+                    id: "xp1k",
+                    icon: "\u{1F48E}",
+                    name: "Dedicated",
+                    desc: "Earn 1,000 XP",
+                    check: () => state.xp >= 1000,
+                },
+                {
+                    id: "xp10k",
+                    icon: "\u{1F451}",
+                    name: "Pi Royalty",
+                    desc: "Earn 10,000 XP",
+                    check: () => state.xp >= 10000,
+                },
+                {
+                    id: "prac1k",
+                    icon: "\u{1F4AB}",
+                    name: "Practitioner",
+                    desc: "1,000 practiced",
+                    check: () => state.totalPracticed >= 1000,
+                },
+                {
+                    id: "prac10k",
+                    icon: "\u2728",
+                    name: "Transcendent",
+                    desc: "10,000 practiced",
+                    check: () => state.totalPracticed >= 10000,
+                },
+            ];
+
+            function getLevel(xp) {
+                let lvl = 1,
+                    need = 100;
+                while (xp >= need) {
+                    xp -= need;
+                    lvl++;
+                    need = lvl * 100;
+                }
+                return { level: lvl, current: xp, needed: lvl * 100 };
+            }
+
+            function addXP(amount) {
+                state.xp += amount;
+                saveState();
+                updateHeader();
+                checkAchievements();
+            }
+
+            function checkAchievements() {
+                for (const a of ACHIEVEMENTS) {
+                    if (!state.achievements.includes(a.id) && a.check()) {
+                        state.achievements.push(a.id);
+                        saveState();
+                        showToast(a.icon + " " + a.name + " unlocked!");
+                    }
+                }
+            }
+
+            function showToast(msg) {
+                const t = el("div", { className: "toast", textContent: msg });
+                document.getElementById("toastContainer").appendChild(t);
+                setTimeout(() => t.remove(), 3200);
+            }
+
+            function updateHeader() {
+                const info = getLevel(state.xp);
+                document.getElementById("levelBadge").textContent =
+                    "LVL " + info.level;
+                document.getElementById("levelFill").style.width =
+                    (info.current / info.needed) * 100 + "%";
+                document.getElementById("xpLabel").textContent =
+                    info.current + " / " + info.needed + " XP";
+            }
+
+            function updateStatsTab() {
+                const info = getLevel(state.xp);
+                document.getElementById("totalXP").textContent =
+                    state.xp.toLocaleString();
+                document.getElementById("totalLevel").textContent = info.level;
+                document.getElementById("totalPracticed").textContent =
+                    state.totalPracticed.toLocaleString();
+                document.getElementById("hsBestStreak").textContent =
+                    state.bestStreak;
+                document.getElementById("hsChunks").textContent =
+                    state.chunksLearned;
+                document.getElementById("hsFillBest").textContent =
+                    state.bestFillScore ? state.bestFillScore + "%" : "0";
+                document.getElementById("hsBestDPM").textContent =
+                    state.bestDPM;
+
+                // Build achievements grid with safe DOM
+                const grid = document.getElementById("achievementsGrid");
+                clearChildren(grid);
+                for (const a of ACHIEVEMENTS) {
+                    const unlocked = state.achievements.includes(a.id);
+                    const card = el(
+                        "div",
+                        {
+                            className:
+                                "achievement" + (unlocked ? " unlocked" : ""),
+                        },
+                        [
+                            el("div", {
+                                className: "ach-icon",
+                                textContent: a.icon,
+                            }),
+                            el("div", {
+                                className: "ach-name",
+                                textContent: a.name,
+                            }),
+                            el("div", {
+                                className: "ach-desc",
+                                textContent: a.desc,
+                            }),
+                        ],
+                    );
+                    grid.appendChild(card);
+                }
+            }
+
+            // ─── Tabs ───
+            document
+                .getElementById("tabsNav")
+                .addEventListener("click", function (e) {
+                    const btn = e.target.closest(".tab-btn");
+                    if (!btn) return;
+                    document
+                        .querySelectorAll(".tab-btn")
+                        .forEach((b) => b.classList.remove("active"));
+                    document
+                        .querySelectorAll(".panel")
+                        .forEach((p) => p.classList.remove("active"));
+                    btn.classList.add("active");
+                    document
+                        .getElementById("panel-" + btn.dataset.tab)
+                        .classList.add("active");
+                    if (btn.dataset.tab === "stats") {
+                        updateStatsTab();
+                        refreshLeaderboard(true);
+                    }
+                });
+
+            // ─── Digit Count Slider ───
+            const digitSlider = document.getElementById("digitCountSlider");
+            const digitCountVal = document.getElementById("digitCountVal");
+            digitSlider.addEventListener("input", function () {
+                maxDigits = parseInt(this.value);
+                digitCountVal.textContent = maxDigits;
+            });
+
+            // ═══════════════════════════════════════════
+            // SEQUENTIAL MODE
+            // ═══════════════════════════════════════════
+            let seqPos = 0,
+                seqActive = false,
+                seqXPEarned = 0;
+
+            function seqRender() {
+                const digits = getDigits();
+                const display = document.getElementById("seqDisplay");
+                clearChildren(display);
+
+                display.appendChild(span("d-pre", "3."));
+                for (let i = 0; i < digits.length; i++) {
+                    if (i < seqPos) {
+                        display.appendChild(span("d-ok", digits[i]));
+                    } else if (i === seqPos && seqActive) {
+                        display.appendChild(span("d-cur", "_"));
+                        break;
+                    } else {
+                        break;
+                    }
+                    if ((i + 1) % 5 === 0 && i < digits.length - 1)
+                        display.appendChild(document.createTextNode(" "));
+                }
+
+                document.getElementById("seqCurrent").textContent = seqPos;
+                document.getElementById("seqXP").textContent = seqXPEarned;
+                document.getElementById("seqBest").textContent =
+                    state.bestStreak;
+            }
+
+            function seqShowError(wrongDigit) {
+                const display = document.getElementById("seqDisplay");
+                display.appendChild(span("d-err", wrongDigit));
+                display.appendChild(
+                    span("d-dim", " \u2190 was " + getDigits()[seqPos]),
+                );
+                display.classList.add("shake");
+                setTimeout(() => display.classList.remove("shake"), 300);
+            }
+
+            document
+                .getElementById("seqStart")
+                .addEventListener("click", function () {
+                    seqPos = 0;
+                    seqActive = true;
+                    seqXPEarned = 0;
+                    seqRender();
+                    const inp = document.getElementById("seqInput");
+                    inp.value = "";
+                    inp.focus();
+                });
+
+            document
+                .getElementById("seqReset")
+                .addEventListener("click", function () {
+                    seqPos = 0;
+                    seqActive = false;
+                    seqXPEarned = 0;
+                    seqRender();
+                });
+
+            document
+                .getElementById("seqInput")
+                .addEventListener("input", function () {
+                    if (!seqActive) return;
+                    const val = this.value;
+                    if (!val) return;
+                    const digit = val[val.length - 1];
+                    this.value = "";
+
+                    if (digit === getDigits()[seqPos]) {
+                        seqPos++;
+                        seqXPEarned += 2;
+                        addXP(2);
+                        state.totalPracticed++;
+                        if (seqPos > state.bestStreak) {
+                            state.bestStreak = seqPos;
+                            saveState();
+                        }
+                        seqRender();
+                        if (seqPos >= getDigits().length) {
+                            seqActive = false;
+                            showToast(
+                                "Incredible! All " + maxDigits + " digits!",
+                            );
+                            submitScore("sequential", seqPos);
+                            seqRender();
+                        }
+                    } else {
+                        seqActive = false;
+                        seqShowError(digit);
+                        submitScore("sequential", seqPos);
+                        checkAchievements();
+                    }
+                });
+
+            document
+                .getElementById("seqDisplay")
+                .addEventListener("click", function () {
+                    document.getElementById("seqInput").focus();
+                });
+
+            // ═══════════════════════════════════════════
+            // CHUNK MODE
+            // ═══════════════════════════════════════════
+            let chunkIdx = 0,
+                chunkReps = 0,
+                chunkPhase = "idle"; // idle, memorize, recall
+            let chunkTimeout = null;
+
+            function getChunk(idx) {
+                return getDigits().slice(idx * 5, idx * 5 + 5);
+            }
+            function totalChunks() {
+                return Math.ceil(getDigits().length / 5);
+            }
+
+            function chunkRenderProgress() {
+                const tc = totalChunks();
+                const wrap = document.getElementById("chunkProgress");
+                clearChildren(wrap);
+                for (let i = 0; i < tc; i++) {
+                    const dot = el("div", {
+                        className:
+                            "chunk-dot" +
+                            (i < chunkIdx
+                                ? " mastered"
+                                : i === chunkIdx && chunkPhase !== "idle"
+                                  ? " current"
+                                  : ""),
+                    });
+                    wrap.appendChild(dot);
+                }
+                document.getElementById("chunkNum").textContent = chunkIdx + 1;
+                document.getElementById("chunkRep").textContent =
+                    chunkReps + "/3";
+                document.getElementById("chunkMastered").textContent =
+                    state.chunksLearned;
+            }
+
+            function chunkStartMemorize() {
+                chunkPhase = "memorize";
+                const chunk = getChunk(chunkIdx);
+                if (!chunk) {
+                    showToast("All chunks mastered!");
+                    chunkPhase = "idle";
+                    return;
+                }
+                const display = document.getElementById("chunkDisplay");
+                display.textContent = chunk;
+                display.classList.remove("hidden-chunk");
+                document.getElementById("chunkInput").style.display = "none";
+                chunkRenderProgress();
+
+                if (chunkTimeout) clearTimeout(chunkTimeout);
+                chunkTimeout = setTimeout(function () {
+                    if (chunkPhase !== "memorize") return;
+                    chunkPhase = "recall";
+                    display.textContent = "Type it!";
+                    display.classList.add("hidden-chunk");
+                    const inp = document.getElementById("chunkInput");
+                    inp.style.display = "";
+                    inp.value = "";
+                    inp.focus();
+                }, 3000);
+            }
+
+            document
+                .getElementById("chunkStart")
+                .addEventListener("click", function () {
+                    if (chunkPhase === "idle") {
+                        chunkIdx = 0;
+                        chunkReps = 0;
+                    }
+                    chunkStartMemorize();
+                });
+
+            document
+                .getElementById("chunkRestart")
+                .addEventListener("click", function () {
+                    if (chunkTimeout) clearTimeout(chunkTimeout);
+                    chunkIdx = 0;
+                    chunkReps = 0;
+                    chunkPhase = "idle";
+                    document.getElementById("chunkDisplay").textContent =
+                        "Press Start to begin";
+                    document
+                        .getElementById("chunkDisplay")
+                        .classList.remove("hidden-chunk");
+                    document.getElementById("chunkInput").style.display =
+                        "none";
+                    chunkRenderProgress();
+                });
+
+            document
+                .getElementById("chunkInput")
+                .addEventListener("keydown", function (e) {
+                    if (e.key === "Enter" && chunkPhase === "recall") {
+                        const chunk = getChunk(chunkIdx);
+                        const display = document.getElementById("chunkDisplay");
+                        if (this.value === chunk) {
+                            chunkReps++;
+                            state.totalPracticed += 5;
+                            addXP(15);
+                            if (chunkReps >= 3) {
+                                chunkIdx++;
+                                chunkReps = 0;
+                                state.chunksLearned++;
+                                saveState();
+                                addXP(50);
+                                submitScore("chunks", state.chunksLearned);
+                                showToast("Chunk " + chunkIdx + " mastered!");
+                            }
+                            chunkRenderProgress();
+                            this.value = "";
+                            if (chunkIdx < totalChunks()) {
+                                chunkStartMemorize();
+                            } else {
+                                chunkPhase = "idle";
+                                display.textContent = "All chunks mastered!";
+                                display.classList.add("hidden-chunk");
+                                this.style.display = "none";
+                            }
+                        } else {
+                            this.classList.add("shake");
+                            setTimeout(
+                                () => this.classList.remove("shake"),
+                                300,
+                            );
+                            display.textContent = chunk;
+                            display.classList.remove("hidden-chunk");
+                            this.value = "";
+                            if (chunkTimeout) clearTimeout(chunkTimeout);
+                            chunkTimeout = setTimeout(() => {
+                                if (chunkPhase !== "recall") return;
+                                display.textContent = "Try again!";
+                                display.classList.add("hidden-chunk");
+                                this.focus();
+                            }, 1500);
+                        }
+                    }
+                });
+
+            // ═══════════════════════════════════════════
+            // FILL BLANKS MODE
+            // ═══════════════════════════════════════════
+            let fillBlankIndices = [];
+
+            document
+                .getElementById("fillDifficulty")
+                .addEventListener("input", function () {
+                    document.getElementById("fillDiffVal").textContent =
+                        this.value + "%";
+                });
+
+            function fillGenerate() {
+                const digits = getDigits();
+                const diff =
+                    parseInt(document.getElementById("fillDifficulty").value) /
+                    100;
+                const grid = document.getElementById("fillGrid");
+                clearChildren(grid);
+                fillBlankIndices = [];
+
+                grid.appendChild(span("fill-known", "3."));
+                grid.lastChild.style.color = "var(--purple)";
+                grid.lastChild.style.textShadow =
+                    "0 0 6px rgba(124,58,237,0.4)";
+
+                const blankInputs = [];
+
+                for (let i = 0; i < digits.length; i++) {
+                    const isBlank = Math.random() < diff;
+                    if (isBlank) {
+                        fillBlankIndices.push(i);
+                        const inp = el("input", {
+                            className: "fill-blank",
+                            maxlength: "1",
+                            inputmode: "numeric",
+                            autocomplete: "off",
+                            autocorrect: "off",
+                            "data-idx": String(i),
+                        });
+                        blankInputs.push(inp);
+                        grid.appendChild(inp);
+                    } else {
+                        grid.appendChild(span("fill-known", digits[i]));
+                    }
+                    if ((i + 1) % 5 === 0 && i < digits.length - 1) {
+                        grid.appendChild(document.createTextNode(" "));
+                    }
+                }
+
+                // Auto-advance between blanks
+                blankInputs.forEach(function (inp, idx) {
+                    inp.addEventListener("input", function () {
+                        if (this.value && idx < blankInputs.length - 1)
+                            blankInputs[idx + 1].focus();
+                    });
+                    inp.addEventListener("keydown", function (e) {
+                        if (e.key === "Backspace" && !this.value && idx > 0)
+                            blankInputs[idx - 1].focus();
+                    });
+                });
+
+                document.getElementById("fillScore").textContent = "-";
+            }
+
+            document
+                .getElementById("fillGenerate")
+                .addEventListener("click", fillGenerate);
+
+            document
+                .getElementById("fillCheck")
+                .addEventListener("click", function () {
+                    const digits = getDigits();
+                    if (!fillBlankIndices.length) return;
+                    let correct = 0;
+                    const blanks = document.querySelectorAll(".fill-blank");
+                    blanks.forEach(function (inp) {
+                        const idx = parseInt(inp.getAttribute("data-idx"));
+                        if (inp.value === digits[idx]) {
+                            inp.classList.add("correct");
+                            inp.classList.remove("wrong");
+                            correct++;
+                        } else {
+                            inp.classList.add("wrong");
+                            inp.classList.remove("correct");
+                            inp.value = digits[idx];
+                        }
+                        inp.disabled = true;
+                    });
+                    const pct = Math.round(
+                        (correct / fillBlankIndices.length) * 100,
+                    );
+                    document.getElementById("fillScore").textContent =
+                        pct + "%";
+                    state.totalPracticed += fillBlankIndices.length;
+                    addXP(correct * 5);
+                    if (pct > state.bestFillScore) {
+                        state.bestFillScore = pct;
+                        saveState();
+                    }
+                    document.getElementById("fillBestScore").textContent =
+                        state.bestFillScore + "%";
+                    submitScore("fill", pct);
+                    checkAchievements();
+                });
+
+            // ═══════════════════════════════════════════
+            // SPEED MODE
+            // ═══════════════════════════════════════════
+            let speedActive = false,
+                speedPos = 0,
+                speedStart = 0,
+                speedInterval = null;
+
+            function speedRender() {
+                const digits = getDigits();
+                const display = document.getElementById("speedDisplay");
+                clearChildren(display);
+
+                display.appendChild(span("d-pre", "3."));
+                for (let i = 0; i < speedPos; i++) {
+                    display.appendChild(span("d-ok", digits[i]));
+                    if ((i + 1) % 5 === 0)
+                        display.appendChild(document.createTextNode(" "));
+                }
+                if (speedActive) display.appendChild(span("d-cur", "_"));
+
+                document.getElementById("speedDigits").textContent = speedPos;
+            }
+
+            function speedUpdateTimer() {
+                const elapsed = (Date.now() - speedStart) / 1000;
+                const remaining = Math.max(0, 60 - elapsed);
+                const timerEl = document.getElementById("speedTimer");
+                timerEl.textContent = remaining.toFixed(1);
+                timerEl.className =
+                    "speed-timer " +
+                    (remaining > 20
+                        ? "running"
+                        : remaining > 10
+                          ? "warning"
+                          : "danger");
+
+                if (elapsed > 0) {
+                    document.getElementById("speedDPM").textContent =
+                        Math.round(speedPos / (elapsed / 60));
+                }
+
+                if (remaining <= 0) speedEnd();
+            }
+
+            function speedEnd() {
+                speedActive = false;
+                clearInterval(speedInterval);
+                const elapsed = (Date.now() - speedStart) / 1000;
+                const dpm =
+                    elapsed > 0 ? Math.round(speedPos / (elapsed / 60)) : 0;
+                document.getElementById("speedDPM").textContent = dpm;
+                document.getElementById("speedTimer").className =
+                    "speed-timer idle";
+                state.totalPracticed += speedPos;
+                addXP(dpm * 2);
+                if (dpm > state.bestDPM) {
+                    state.bestDPM = dpm;
+                    saveState();
+                }
+                document.getElementById("speedBest").textContent =
+                    state.bestDPM;
+                submitScore("speed", dpm);
+                checkAchievements();
+                speedRender();
+            }
+
+            document
+                .getElementById("speedStart")
+                .addEventListener("click", function () {
+                    speedPos = 0;
+                    speedActive = true;
+                    speedStart = Date.now();
+                    document.getElementById("speedTimer").textContent = "60.0";
+                    speedRender();
+                    document.getElementById("speedInput").value = "";
+                    document.getElementById("speedInput").focus();
+                    clearInterval(speedInterval);
+                    speedInterval = setInterval(speedUpdateTimer, 50);
+                });
+
+            document
+                .getElementById("speedReset")
+                .addEventListener("click", function () {
+                    speedActive = false;
+                    clearInterval(speedInterval);
+                    speedPos = 0;
+                    document.getElementById("speedTimer").textContent = "60.0";
+                    document.getElementById("speedTimer").className =
+                        "speed-timer idle";
+                    document.getElementById("speedDigits").textContent = "0";
+                    document.getElementById("speedDPM").textContent = "0";
+                    clearChildren(document.getElementById("speedDisplay"));
+                });
+
+            document
+                .getElementById("speedInput")
+                .addEventListener("input", function () {
+                    if (!speedActive) return;
+                    const val = this.value;
+                    if (!val) return;
+                    const digit = val[val.length - 1];
+                    this.value = "";
+
+                    if (digit === getDigits()[speedPos]) {
+                        speedPos++;
+                        speedRender();
+                        if (speedPos >= getDigits().length) speedEnd();
+                    } else {
+                        const display = document.getElementById("speedDisplay");
+                        display.appendChild(span("d-err", digit));
+                        display.classList.add("shake");
+                        setTimeout(
+                            () => display.classList.remove("shake"),
+                            300,
+                        );
+                        speedEnd();
+                    }
+                });
+
+            document
+                .getElementById("speedDisplay")
+                .addEventListener("click", function () {
+                    document.getElementById("speedInput").focus();
+                });
+
+            // ─── Reset All ───
+            document
+                .getElementById("resetAll")
+                .addEventListener("click", function () {
+                    if (confirm("Reset all progress? This cannot be undone.")) {
+                        state = { ...DEFAULT_STATE, achievements: [] };
+                        saveState();
+                        updateHeader();
+                        updateStatsTab();
+                        seqPos = 0;
+                        seqActive = false;
+                        seqXPEarned = 0;
+                        seqRender();
+                        showToast("Progress reset");
+                    }
+                });
+
+            // ═══════════════════════════════════════════
+            // STARFIELD CANVAS
+            // ═══════════════════════════════════════════
+            (function () {
+                const canvas = document.getElementById("starfield");
+                const ctx = canvas.getContext("2d");
+                let W,
+                    H,
+                    stars = [];
+
+                function resize() {
+                    W = canvas.width = window.innerWidth;
+                    H = canvas.height = window.innerHeight;
+                }
+
+                function createStars() {
+                    stars = [];
+                    const count = Math.min(300, Math.floor((W * H) / 4000));
+                    for (let i = 0; i < count; i++) {
+                        stars.push({
+                            x: Math.random() * W,
+                            y: Math.random() * H,
+                            r: Math.random() * 1.5 + 0.3,
+                            a: Math.random() * 0.7 + 0.3,
+                            speed: Math.random() * 0.15 + 0.02,
+                            tw: Math.random() * Math.PI * 2,
+                        });
+                    }
+                }
+
+                function draw() {
+                    ctx.clearRect(0, 0, W, H);
+
+                    // Nebula glows
+                    const g1 = ctx.createRadialGradient(
+                        W * 0.3,
+                        H * 0.4,
+                        0,
+                        W * 0.3,
+                        H * 0.4,
+                        W * 0.5,
+                    );
+                    g1.addColorStop(0, "rgba(124, 58, 237, 0.03)");
+                    g1.addColorStop(1, "transparent");
+                    ctx.fillStyle = g1;
+                    ctx.fillRect(0, 0, W, H);
+
+                    const g2 = ctx.createRadialGradient(
+                        W * 0.7,
+                        H * 0.6,
+                        0,
+                        W * 0.7,
+                        H * 0.6,
+                        W * 0.4,
+                    );
+                    g2.addColorStop(0, "rgba(6, 214, 160, 0.02)");
+                    g2.addColorStop(1, "transparent");
+                    ctx.fillStyle = g2;
+                    ctx.fillRect(0, 0, W, H);
+
+                    for (const s of stars) {
+                        s.y -= s.speed;
+                        s.tw += 0.01;
+                        if (s.y < -2) {
+                            s.y = H + 2;
+                            s.x = Math.random() * W;
+                        }
+                        ctx.beginPath();
+                        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                        ctx.fillStyle =
+                            "rgba(200, 220, 255, " +
+                            s.a * (0.7 + 0.3 * Math.sin(s.tw)) +
+                            ")";
+                        ctx.fill();
+                    }
+
+                    requestAnimationFrame(draw);
+                }
+
+                resize();
+                createStars();
+                draw();
+                window.addEventListener("resize", function () {
+                    resize();
+                    createStars();
+                });
+            })();
+
+            // ─── Init ───
+            updateHeader();
+            seqRender();
+            chunkRenderProgress();
+            document.getElementById("fillBestScore").textContent =
+                state.bestFillScore ? state.bestFillScore + "%" : "0";
+            document.getElementById("speedBest").textContent = state.bestDPM;
+
+            // ═══════════════════════════════════════════
+            // SERVICE WORKER (offline support)
+            // ═══════════════════════════════════════════
+            if ("serviceWorker" in navigator) {
+                navigator.serviceWorker.register("sw.js").catch(function () {});
+            }
+        </script>
+    </body>
+</html>
