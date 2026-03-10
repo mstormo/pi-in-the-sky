@@ -1345,8 +1345,12 @@
             }
 
             // Submit a score to Firestore
+            // Track best submitted score per mode to avoid filling DB with low scores
+            var bestSubmitted = JSON.parse(localStorage.getItem("pisky_best_submitted") || "{}");
+
             function submitScore(mode, score) {
                 if (!db || score <= 0) return;
+                if (bestSubmitted[mode] && score <= bestSubmitted[mode]) return;
                 var name = getPlayerName();
                 db.collection("scores")
                     .add({
@@ -1355,6 +1359,10 @@
                         score: score,
                         timestamp:
                             firebase.firestore.FieldValue.serverTimestamp(),
+                    })
+                    .then(function () {
+                        bestSubmitted[mode] = score;
+                        localStorage.setItem("pisky_best_submitted", JSON.stringify(bestSubmitted));
                     })
                     .catch(function () {});
             }
