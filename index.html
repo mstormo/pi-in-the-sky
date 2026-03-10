@@ -966,7 +966,7 @@
                 <input
                     type="text"
                     id="playerName"
-                    maxlength="20"
+                    maxlength="40"
                     placeholder="Enter your name..."
                     autocomplete="off"
                 />
@@ -1265,7 +1265,7 @@
                 var nameInput = document.getElementById("playerName");
                 nameInput.value = playerName;
                 nameInput.addEventListener("input", function () {
-                    playerName = this.value.trim().slice(0, 20);
+                    playerName = this.value.trim().slice(0, 40);
                     localStorage.setItem("pisky_name", playerName);
                 });
             })();

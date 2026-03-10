@@ -31,7 +31,7 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasAll(['name', 'mode', 'score', 'timestamp'])
                     && request.resource.data.name is string
                     && request.resource.data.name.size() > 0
-                    && request.resource.data.name.size() <= 20
+                    && request.resource.data.name.size() <= 40
                     && request.resource.data.mode in ['sequential', 'chunks', 'fill', 'speed']
                     && request.resource.data.score is number
                     && request.resource.data.score >= 0
